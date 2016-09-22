@@ -1,5 +1,5 @@
 {
-    "name": "seotils/unique",
+    "name": "seotils/utils-counters",
     "description": "Counters and unique values generators.",
     "license": "GPL-3.0",
     "keywords": ["counters", "unique values", "generators"],
