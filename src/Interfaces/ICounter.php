@@ -15,24 +15,77 @@ namespace Seotils\Utilites\Counters\Interfaces;
 interface ICounter {
 
   /**
-   * Capture the counter.
+   * Saves a new counter value.
    *
-   * @return void
+   * @return boolean TRUE on success, otherwise FALSE.
    */
-  public function capture();
+  public function commit();
 
   /**
-   * Release capture.
+   * Generate a new counter value.
    *
-   * @return void
+   * @param int $baseValue Base (minimal) value for a counter.
+   *
+   * @return boolean TRUE on success, otherwise FALSE.
    */
-  public function release();
+  public function generate( $baseValue );
 
   /**
-   * Returns curent counter value.
+   * Generate and commits new counter value.
+   *
+   * @param int $baseValue Base (minimal) value for a counter.
+   *
+   * @param float $timeout The maximum amount of time (in seconds) the counter will attempt to capture a control.
+   *
+   * @param int $sleep Delay (in microseconds) between attempts to lock the counter.
    *
    * @return int Counter value.
    */
+  public function getOne( $baseValue, $timeout, $sleep );
+
+  /**
+   * Lock the counter.
+   *
+   * @return boolean TRUE on success, otherwise FALSE.
+   */
+  public function lock();
+
+  /**
+   * Returns TRUE if counter is locked, otherwise FALSE.
+   *
+   * @return boolean
+   */
+  public function locked();
+
+  /**
+   * Rollback value of a counter.
+   *
+   * @return boolean TRUE on success, otherwise FALSE.
+   */
+  public function rollback();
+
+  /**
+   * Sets the counter value.
+   *
+   * @param int $value New value for a counter.
+   *
+   * @return boolean TRUE on success, otherwise FALSE.
+   */
+  public function setTo( $value );
+
+  /**
+   * Returns curent counter value.
+   * MUST return NULL if counter value are did not generated yet.
+   *
+   * @return int Counter value or FALSE if a counter has not been locked.
+   */
   public function value();
+
+  /**
+   * Unlock the counter.
+   *
+   * @return boolean TRUE on success, otherwise FALSE.
+   */
+  public function unlock();
 
 }

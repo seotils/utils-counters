@@ -9,7 +9,8 @@
 
 namespace Seotils\Utilites\Counters;
 
-use Seotils\Traits\DeferredExceptions;
+//use Seotils\Traits\DeferredExceptions;
+use Seotils\Utilites\Counters\Interfaces\IAlphabet;
 use Seotils\Utilites\Counters\Interfaces\ICounter;
 
 class UniqueGeneratorException extends \Exception {}
@@ -32,49 +33,62 @@ class UniqueGenerator {
 
   protected $value = null;
 
-  protected $zeroTime = 0;
+  protected $zeroTime;
 
   /**
-   * Constructor
+   * Constructor.
    *
-   * @param string $filePath Path to the counter file.
+   * @param int $zeroTime The basic time reference for the generation of value.
    *
    * @throws FileCounterException
    */
-  public function __construct( $filePath ) {
-    if( ! is_string( $filePath) ) {
-      throw new FileCounterException( 'Invalid path to the file');
-    }
-    if( ! file_exists( $filePath)) {
-      try {
-        file_put_contents( $filePath, '0:0');
-      } catch( Exception $exc ) {
-        throw new FileCounterException( 'Invalid path to the file', 0 , $exc);
-      }
-    }
-    $this->path = $filePath;
+  public function __construct( $zeroTime = 0 ) {
+    $this->zeroTime =
+      (int) $zeroTime > 0
+      ? (int) $zeroTime
+      : 0;
   }
 
   public function asHex() {
-
-    return $this;
+    $symbols = IAlphabet::ALPHA_DIGITS_HEX;
+    $radix = mb_strlen( $symbols, 'utf-8' );
+    return $this->notation( $this->value, $radix, $symbols);
   }
 
   public function asInt() {
-
-    return $this;
+    return $this->value;
   }
 
   public function asString() {
-
-    return $this;
+    $symbols =
+      $this->alphabet && ! empty( $this->alphabet )
+      ? $this->alphabet
+      : IAlphabet::ALPHA_DIGITS_LATIN_ALL;
+    $radix = mb_strlen( $symbols, 'utf-8' );
+    return $this->notation( $this->value, $radix, $symbols);
   }
 
   public function generate() {
-
+    $this->value = time() - $this->zeroTime;
     return $this;
   }
 
+  protected function notation( $value, $radix, $symbols) {
+    $result = '';
+    $remainder = $value % $radix;
+    $value = (int) ( $value / $radix );
+    if( $value ) {
+      $result .= $this->notation( $value, $radix, $symbols);
+    }
+    $result .= $symbols [ $remainder ];
+    return $result;
+  }
+
+  /**
+   * Sets the aviable symbols to represent value as a string.
+   * @param string $alphabet Aviable symbols.
+   * @return \Seotils\Utilites\Counters\UniqueGenerator
+   */
   public function setAlphabet( $alphabet ) {
     $this->alphabet = $alphabet;
     return $this;
