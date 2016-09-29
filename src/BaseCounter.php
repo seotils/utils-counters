@@ -15,20 +15,16 @@ use Seotils\Traits\DeferredExceptions;
 
 /**
  * BaseCounter class. Use it as a parent class for your own counters.<p>
- * You must to implement the following methods:<br />
- * ::lock() - lock the counter and sets OldValue.<br />
+ * You MUST to implement the following methods:<br />
+ * ::lock() - lock the counter and sets ::$oldValue.<br />
+ * ::locked() - returns counter status (locked or not).<br />
  * ::save() - save the counter state and value.<br />
  * ::unlock() - unlock the counter.
+ *
+ * And may be you would be need to override the ::reset() method.
  * </p>
  */
 abstract class BaseCounter implements ICounter {
-
-  /**
-   * Is a counter captured (locked)
-   *
-   * @var boolean
-   */
-  protected $captured = false;
 
   /**
    * Old counter value
@@ -132,9 +128,7 @@ abstract class BaseCounter implements ICounter {
    *
    * @return boolean
    */
-  public function locked() {
-    return $this->captured;
-  }
+  abstract public function locked();
 
   /**
    * Resets counter to initial state.
@@ -142,10 +136,10 @@ abstract class BaseCounter implements ICounter {
    * @return void
    */
   protected function reset() {
-    $this->captured = false;
     $this->oldValue = null;
     $this->newValue = null;
   }
+
   /**
    * Rollback value of a counter.
    *

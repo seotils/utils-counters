@@ -10,11 +10,12 @@
 namespace Seotils\Utilites\Counters;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Seotils\Utilites\Counters\BaseCounter;
 use Seotils\Utilites\Counters\Interfaces\ICounter;
 
 class CacheCounterException extends \Exception {}
 
-class CacheCounter implements ICounter {
+class CacheCounter  extends BaseCounter {
 
   /**
    * Cache instance
@@ -24,11 +25,11 @@ class CacheCounter implements ICounter {
   protected $cache;
 
   /**
-   * Is a counter captured
+   * Counter is locked flag. Default FALSE.
    *
    * @var boolean
    */
-  protected $captured = false;
+  protected $fLocked = false;
 
   /**
    * Counter key name
@@ -45,20 +46,6 @@ class CacheCounter implements ICounter {
   protected $keyLock;
 
   /**
-   * Old counter value
-   *
-   * @var int
-   */
-  protected $oldValue = null;
-
-  /**
-   * Counter value
-   *
-   * @var int
-   */
-  protected $value = null;
-
-  /**
    * Constructor
    *
    * @param CacheItemPoolInterface $cacheInstance Cache instance.
@@ -68,7 +55,7 @@ class CacheCounter implements ICounter {
    */
   public function __construct( CacheItemPoolInterface $cacheInstance, $keyPrefix) {
     if( empty( $keyPrefix ) || ! is_string( $keyPrefix)) {
-      throw new CacheCounterException('Invalid key prefix.');
+      $this->exception('Invalid key prefix.');
     }
     $this->cache = $cacheInstance;
     $this->keyLock = $keyPrefix . 'Lock';
@@ -76,91 +63,9 @@ class CacheCounter implements ICounter {
   }
 
   /**
-   * Saves a new counter value.
-   *
-   * @return boolean TRUE on success, otherwise FALSE.
-   */
-  public function commit() {
-    $result = false;
-
-    if( $this->locked() ) {
-      $this->save( false, $this->value);
-      $this->reset();
-      $result = true;
-    }
-
-    return $result;
-  }
-
-  /**
-   * Generate a new counter value.
-   *
-   * @param int $baseValue Base (minimal) value for a counter.
-   *
-   * @return boolean TRUE on success, otherwise FALSE.
-   *
-   * @throws FileCounterException
-   */
-  public function generate( $baseValue = 0 ) {
-    $result = false;
-
-    if( ! is_numeric( $baseValue)) {
-      throw new FileCounterException('Invalid base value');
-    }
-
-    if( $this->locked() ) {
-      $baseValue = (int) $baseValue;
-      if( $baseValue > $this->oldValue ) {
-        $this->value = $baseValue + 1;
-      } else {
-        $this->value = $this->oldValue + 1;
-      }
-      $result = true;
-    }
-
-    return $result;
-  }
-
-  /**
-   * Generate and commit a new counter value.
-   *
-   * @param int $baseValue Base (minimal) value for a counter.
-   *
-   * @param float $timeout The maximum amount of time (in seconds) the counter will attempt to capture a control.
-   *
-   * @return int Counter value.
-   */
-  public function getOne( $baseValue = 0, $timeout = 0.0 ) {
-    $result = null;
-
-    // Lock the counter
-    $mt = microtime( true );
-    while( ! $this->locked()) {
-      $this->lock();
-      if( $this->locked() || microtime( true )  - $mt > $timeout ) {
-        break;
-      }
-      usleep( 100 );
-    }
-
-    // Generate a value
-    if( $this->locked() && $this->generate( $baseValue )) {
-      $result = $this->value();
-      // Try to commit or rollback changes
-      if( ! $this->commit()) {
-        $result = null;
-        $this->rollback() || $this->unlock();
-      }
-    }
-    return $result;
-  }
-
-  /**
    * Lock the counter.
    *
    * @return boolean TRUE on success, otherwise FALSE.
-   *
-   * @throws FileCounterException
    */
   public function lock() {
     if( ! $this->locked() ) {
@@ -183,7 +88,7 @@ class CacheCounter implements ICounter {
    * @return boolean
    */
   public function locked() {
-    return $this->captured;
+    return $this->fLocked;
   }
 
   /**
@@ -192,24 +97,8 @@ class CacheCounter implements ICounter {
    * @return void
    */
   protected function reset() {
-    $this->captured = false;
-    $this->oldValue = null;
-    $this->value = null;
-  }
-
-  /**
-   * Rollback value of a counter.
-   *
-   * @return boolean TRUE on success, otherwise FALSE.
-   */
-  public function rollback() {
-    $result = false;
-    if( $this->locked() ) {
-      $this->save( false, $this->oldValue);
-      $this->reset();
-      $result = true;
-    }
-    return $result;
+    $this->fLocked = false;
+    parent::reset();
   }
 
   /**
@@ -230,7 +119,7 @@ class CacheCounter implements ICounter {
         $itemLock = $this->cache->getItem( $this->keyLock );
         $itemLock->set( 1 );
         if( $this->cache->save( $itemLock )) {
-          $this->captured = true;
+          $this->fLocked = true;
           $result = true;
         }
       }
@@ -238,7 +127,7 @@ class CacheCounter implements ICounter {
          $this->cache->hasItem( $this->keyLock )
       && $this->cache->deleteItem( $this->keyLock )
     ) {
-      $this->captured = false;
+      $this->fLocked = false;
       $result = true;
     }
 
@@ -250,15 +139,6 @@ class CacheCounter implements ICounter {
     }
 
     return $result;
-  }
-
-  /**
-   * Returns curent counter value.
-   *
-   * @return mixed NULL if it not generated, FALSE if counter is not locked, otherwise counter value.
-   */
-  public function value() {
-    return $this->locked() ? $this->value : false;
   }
 
   /**

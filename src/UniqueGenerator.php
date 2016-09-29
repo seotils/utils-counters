@@ -9,8 +9,7 @@
 
 namespace Seotils\Utilites\Counters;
 
-//use Seotils\Traits\DeferredExceptions;
-use Seotils\Utilites\Counters\Interfaces\IAlphabet;
+use Seotils\Utilites\Alphabet;
 use Seotils\Utilites\Counters\Interfaces\ICounter;
 
 class UniqueGeneratorException extends \Exception {}
@@ -45,8 +44,8 @@ class UniqueGenerator {
   public function __construct( $zeroTime = 0 ) {
     $this->zeroTime =
       (int) $zeroTime > 0
-      ? (int) $zeroTime
-      : 0;
+        ? (int) $zeroTime
+        : 0;
   }
 
   public function asHex() {
@@ -63,7 +62,7 @@ class UniqueGenerator {
     $symbols =
       $this->alphabet && ! empty( $this->alphabet )
       ? $this->alphabet
-      : IAlphabet::ALPHA_DIGITS_LATIN_ALL;
+      : Alphabet::ALPHA_DIGITS_LATIN_ALL;
     $radix = mb_strlen( $symbols, 'utf-8' );
     return $this->notation( $this->value, $radix, $symbols);
   }
@@ -73,25 +72,20 @@ class UniqueGenerator {
     return $this;
   }
 
-  protected function notation( $value, $radix, $symbols) {
-    $result = '';
-    $remainder = $value % $radix;
-    $value = (int) ( $value / $radix );
-    if( $value ) {
-      $result .= $this->notation( $value, $radix, $symbols);
-    }
-    $result .= $symbols [ $remainder ];
-    return $result;
-  }
-
   /**
-   * Sets the aviable symbols to represent value as a string.
+   * Sets aviable symbols to represent value as a string.
+   *
    * @param string $alphabet Aviable symbols.
-   * @return \Seotils\Utilites\Counters\UniqueGenerator
+   *
+   * @return boolean TRUE on success, otherwise FALSE.
    */
   public function setAlphabet( $alphabet ) {
-    $this->alphabet = $alphabet;
-    return $this;
+    $result = false;
+    if( self::alphabetIsUnique( $alphabet )) {
+      $this->alphabet = $alphabet;
+      $result = true;
+    }
+    return $result;
   }
 
   public function setCounter( ICounter $counter, $wait, $timeout ) {
@@ -120,5 +114,4 @@ class UniqueGenerator {
 
     return $this;
   }
-
 }

@@ -17,6 +17,13 @@ class FileCounterException extends \Exception {}
 class FileCounter extends BaseCounter {
 
   /**
+   * Counter is locked flag. Default FALSE.
+   *
+   * @var boolean
+   */
+  protected $fLocked = false;
+
+  /**
    * Counter file path
    *
    * @var string
@@ -51,17 +58,26 @@ class FileCounter extends BaseCounter {
    * @return boolean TRUE on success, otherwise FALSE.
    */
   public function lock() {
-    if( ! $this->captured ) {
+    if( ! $this->fLocked ) {
       $fData = $this->read();
-      list( $captured, $value ) = explode( ':', $fData);
-      if( ! (int) $captured ) {
+      list( $fLocked, $value ) = explode( ':', $fData);
+      if( ! (int) $fLocked ) {
         if( $this->save( true, $value )) {
           $this->oldValue = $value;
-          $this->captured = true;
+          $this->fLocked = true;
         }
       }
     }
-    return $this->captured;
+    return $this->fLocked;
+  }
+
+  /**
+   * Returns TRUE if counter is locked, otherwise FALSE.
+   *
+   * @return boolean
+   */
+  public function locked() {
+    return $this->fLocked;
   }
 
   /**
@@ -78,6 +94,16 @@ class FileCounter extends BaseCounter {
   }
 
   /**
+   * Resets counter to initial state.
+   *
+   * @return void
+   */
+  protected function reset() {
+    $this->fLocked = false;
+    parent::reset();
+  }
+
+  /**
    * Save data to the counter file.
    *
    * @param bool $state TRUE if locked, otherwise FALSE.
@@ -89,7 +115,7 @@ class FileCounter extends BaseCounter {
    */
   protected function save( $state, $value) {
     if( ! is_string( $this->path ) || empty( $this->path )) {
-      $this->exception('Invalid path to the file.');
+      $this->exception('Invalid path to the counter file.');
     }
     $result = false;
     $st = (bool) $state ? 1 : 0;
@@ -111,7 +137,7 @@ class FileCounter extends BaseCounter {
   public function unlock() {
     $result = false;
     if( $fData = $this->read()) {
-      list( $captured, $value ) = explode( ':', $fData);
+      list( $fLocked, $value ) = explode( ':', $fData);
       if( $this->save( false, $value )) {
         $result = true;
       }

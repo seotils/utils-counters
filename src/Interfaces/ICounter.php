@@ -69,10 +69,16 @@ interface ICounter {
    *
    * @param int $value New value for a counter.
    *
+   * @param float $timeout The maximum amount of time (in seconds) the counter will attempt to capture a control.
+   *
+   * @param int $sleep Delay (in microseconds) between attempts to lock the counter.
+   *
    * @return boolean TRUE on success, otherwise FALSE.
+   *
+   * @throws mixed
    */
-  public function setTo( $value );
-
+  public function setTo( $value, $timeout, $sleep);
+  
   /**
    * Returns curent counter value.
    * MUST return NULL if counter value are did not generated yet.
